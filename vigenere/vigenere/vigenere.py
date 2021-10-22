@@ -2,10 +2,17 @@
 # IMPORTS
 # =====================
 
+# =====================
+# Entry Point
+# =====================
+
+def main ():
+    print("Hello world!")
 
 # =====================
-# Main
+# Entry Point
 # =====================
+
 
 if __name__ == '__main__':
-    print('Hello world!')
+    main()

@@ -28,13 +28,13 @@ else:
 # SETUP
 # =====================
 setup(
-    name="cryptography",
+    name="vigenere",
     author="nbitt",
     version=verstr,
-    packages=['cryptography'],
+    packages=['vigenere'],
     entry_points={
         'console_scripts': [
-            'cryptography = cryptography.cryptography:main',
+            'vigenere = vigenere.vigenere:main',
         ]
     }
 )
