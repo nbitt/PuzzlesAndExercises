@@ -8,7 +8,7 @@ from setuptools import setup
 # PARSE VERSION INFO
 # =====================
 # version import based on: https://github.com/tahoe-lafs/zfec
-VERSIONFILE = "cryptography/_version.py"
+VERSIONFILE = "md5/_version.py"
 verstr = "unknown"
 
 try:
@@ -29,13 +29,13 @@ else:
 # =====================
 
 setup(
-    name="hashing",
+    name="md5",
     author="nbitt",
     version=verstr,
-    packages=['hashing'],
+    packages=['md5'],
     entry_points={
         'console_scripts': [
-            'hashing = hashing.hashing:main',
+            'md5 = md5.md5:main',
         ]
     }
 )
