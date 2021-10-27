@@ -18,3 +18,9 @@ finite, and there are theoretically an infinite number of inputs that could gene
 hash (a collision). Bad actors may take advantage of this through a "collision attack." It is
 much better to use an alg like SHA-256 for hashing (as of 2021).
 
+# TEST
+A limited set of tests can be run by:
+1. Navigating to ../test/
+2. Running the following:
+`python test.py`
+
