@@ -9,7 +9,8 @@
     > "All values are in little-endian"
 
     ALSO USEFUL:
-    https://www.rfc-editor.org/rfc/rfc1321
+    https://www.rfc-editor.org/rfc/rfc1321 (OG source)
+    https://blog.jpolak.org/?p=1985 (excellent explanation of source of values)
 
     TODO:
      1. learn more about class vs static methods and update.
@@ -33,10 +34,17 @@ from math import floor, sin
 class Md5:
 
     def __init__(self, input):
-        self.msg_bitarray = self.load_message(input)
-        self.output_hash = ""  # init empty string
+        """ Class constructor"""
+        # Bytes are converted to binary format and appended to bitarray
+        self.msg_bitarray = bitarray(endian='little')  # init little endian bitarray
+        self.msg_bitarray.frombytes(self.load_message_bytes(input))
 
         # "K[i] denotes a 32-bit constant, different for each (of 64) operation" - wiki
+        # "pseudo-random numbers that will be mashed with the message in various
+        # byzantine ways in the compression function... numbers like these typical for
+        # hashing functions... have some desirable pseudo-random like properties
+        # and have a compact description
+        # note: verified that K vals are correct. Little endian bitstrings also correct.
         # Binary integer part of the sines of integers (units radians) as constants:
         self.K_SINES = []  # init empty list. denoted "K" in refs
         for i in range(0, 64):
@@ -58,28 +66,11 @@ class Md5:
         self.c0 = bitarray(self.num_to_lendian_bitstr(0x98badcfe, 32), endian='little')
         self.d0 = bitarray(self.num_to_lendian_bitstr(0x10325476, 32), endian='little')
 
-    def perform_padding (self):
-        """ Perform required padding to message """
-
-        # Record length
-        msg_len = len(self.msg_bitarray)
-
-        # First add a single "1" bit to message:
-        self.msg_bitarray.append(1)
-
-        # append "0" bit until msg len in bits ≡ 448 (mod 512)
-        while (len(self.msg_bitarray) % 512) != 448:
-            self.msg_bitarray.append(0)
-
-        # Append original length in bits (mod 2**64) to msg
-        for bit in self.num_to_lendian_bitstr(msg_len % 2**64, 64):
-            self.msg_bitarray.append(int(bit))
-
     def digest (self):
         """ Execute main md5 alg. Operates on 128-bit word to make final hash (digest)
         """
         # First perform required padding (multiple of 512):
-        self.perform_padding()  # updates self.msg_bitarray
+        self.msg_bitarray = self.perform_padding(self, self.msg_bitarray)  # update bitarray
 
         # Process the message in successive 512-bit chunks:
         for blk_offset in range(0, int(len(self.msg_bitarray)), 512):  # step 512
@@ -125,10 +116,11 @@ class Md5:
                     shifts = self.SHIFTS[3]  # repeated seq. of shift amts for round
                 # end if
 
+                # Update nonlinear function value
                 # Note: modular addition is used in md5 alg
-                fcn = self.modular_add(fcn, a_hash, modulus=2**32, bits=32)
-                fcn = self.modular_add(fcn, self.K_SINES[i], modulus=2**32, bits=32)
-                fcn = self.modular_add(fcn, m_32bit_words[g], modulus=2 ** 32, bits=32)
+                fcn = self.modular_add(fcn, a_hash, modulus=2**32, bits=32)  # "F + A"
+                fcn = self.modular_add(fcn, self.K_SINES[i], modulus=2**32, bits=32)  # "...+ K[i]"
+                fcn = self.modular_add(fcn, m_32bit_words[g], modulus=2**32, bits=32)  # "...+ M[g]"
                 fcn = self.circular_leftrotate(fcn, shifts[i % 4])  # mod four to repeat shift pattern
 
                 # "Jumble" the 32-bit words of the hash "A, B, C, D"
@@ -137,7 +129,11 @@ class Md5:
                 c_hash = b_hash
                 b_hash = self.modular_add(b_hash, fcn)
 
-            # end i in range(0, 64):
+            # end i in range(0, 64)
+            print(int.from_bytes(a_hash.tobytes(), 'little'))
+            print(int.from_bytes(b_hash.tobytes(), 'little'))
+            print(int.from_bytes(c_hash.tobytes(), 'little'))
+            print(int.from_bytes(d_hash.tobytes(), 'little'))
 
             # Add this chunk's hash to result so far:
             self.a0 = self.modular_add(self.a0, a_hash, 2**32, 32)
@@ -146,29 +142,47 @@ class Md5:
             self.d0 = self.modular_add(self.d0, d_hash, 2**32, 32)
 
         # end for blk_offset in range(...)
-
         digest = self.a0 + self.b0 + self.c0 + self.d0
         return self.bin_to_hex(digest)  # confirmed hex convert working correctly
 
     @staticmethod
-    def load_message (input):
+    def load_message_bytes (input):
         """ Takes file or string as input - note that utf-8 chars are big endian"""
 
         if os.path.isfile(input):
             with open(input, "rb") as f:  # read binary
                 msg = f.read()
+                f.close()  # close file
         else:
             # Must convert string to binary:
             msg = bytes(input, 'utf-8')
 
-        # Bytes are converted to binary format and appended to bitarray
-        binary = "0" + '0'.join(format(x, 'b') for x in msg)  # standard chars start with 0
+        # return bytes
+        return msg
 
-        # return bitarray - convert to little endian
-        return bitarray(binary, endian='little')
+    @staticmethod
+    def perform_padding (self, msg_bitarray):
+        """ Perform required padding to message """
+
+        # Record length
+        msg_len = len(msg_bitarray) % 2**64
+
+        # First add a "1" bit to message:
+        msg_bitarray.append(1)
+
+        # append "0" bit until msg len in bits ≡ 448 (mod 512)
+        while (len(msg_bitarray) % 512) != 448:
+            msg_bitarray.append(0)
+
+        # Append original length in bits (mod 2**64) to msg
+        for bit in self.num_to_lendian_bitstr(msg_len, 64):
+            msg_bitarray.append(int(bit))
+
+        return msg_bitarray
 
     @staticmethod
     def num_to_lendian_bitstr(integer, bits):
+        integer = integer % 2**bits
         tmp = "{0:b}".format(integer)[::-1]  # binary format into "{}" placeholder, reversed for little endian
         if len(tmp) > bits:
             print(f"ERROR: {integer} causes integer overflow for size {bits}")
@@ -179,13 +193,13 @@ class Md5:
     @staticmethod
     def modular_add (bitarray_1, bitarray_2, modulus=2**32, bits=32):
         val_1 = int.from_bytes(bitarray_1.tobytes(), 'little')  # little endian conversion to value
-        val_2 = int.from_bytes(bitarray_2.tobytes(), 'little')# little endian conversion to value
+        val_2 = int.from_bytes(bitarray_2.tobytes(), 'little')  # little endian conversion to value
 
         ans = (val_1 + val_2) % modulus  # execute modular arithmetic
 
         tmp = "{0:b}".format(ans)[::-1]  # binary format into "{}" placeholder, reversed for little endian
         if len(tmp) > bits:
-            print(f"ERROR: modular arithmatic integer overflow for size {bits}")
+            print(f"ERROR: modular arithmetic integer overflow for size {bits}")
         while len(tmp) < bits:
             tmp += '0'  # trailing zeros, as needed
         return bitarray(tmp, endian='little')
