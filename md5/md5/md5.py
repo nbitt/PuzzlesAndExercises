@@ -14,6 +14,7 @@
     TODO:
      1. learn more about class vs static methods and update.
      https://www.geeksforgeeks.org/class-method-vs-static-method-python/
+     2. read spec on where "g" comes from
 
 """
 
@@ -75,12 +76,13 @@ class Md5:
             self.msg_bitarray.append(int(bit))
 
     def digest (self):
-        """ Execute main md5 alg. Operates on 128-bit word to make final hash (digest)"""
+        """ Execute main md5 alg. Operates on 128-bit word to make final hash (digest)
+        """
         # First perform required padding (multiple of 512):
         self.perform_padding()  # updates self.msg_bitarray
 
         # Process the message in successive 512-bit chunks:
-        for blk_offset in range(0, int(len(self.msg_bitarray)), 512): # step 512
+        for blk_offset in range(0, int(len(self.msg_bitarray)), 512):  # step 512
             # Get current block of 512-bits:
             blk_512_bits = self.msg_bitarray[blk_offset: blk_offset + 512]
 
@@ -98,9 +100,7 @@ class Md5:
             # "Main Loop" -- execute operations
             # Note to self: "^" is bitwise XOR, "|" is bitwise OR, "&" is bitwise AND, "~" is NOT
             for i in range(0, 64):
-                # NOTE: "fcn" is one of 4 possible nonlinear functions
-                # "fcn" is denoted "F" in specs/references
-                # TODO: read spec on where "g" comes from
+                # "fcn" is one of 4 possible nonlinear fcns. denoted "F" in refs
 
                 # Round 1 nonlinear fcn
                 if 0 <= i <= 15:
@@ -109,7 +109,7 @@ class Md5:
                     shifts = self.SHIFTS[0]  # repeated seq. of shift amts for round
                 # Round 2 nonlinear fcn
                 elif 16 <= i <= 31:
-                    fcn = (b_hash & d_hash) | (c_hash & (~d_hash))
+                    fcn = (b_hash & d_hash) | ( (~d_hash) & c_hash)
                     g = (5*i + 1) % 16
                     shifts = self.SHIFTS[1]  # repeated seq. of shift amts for round
 
@@ -125,30 +125,30 @@ class Md5:
                     shifts = self.SHIFTS[3]  # repeated seq. of shift amts for round
                 # end if
 
-            # Note: modular addition is used in md5 alg
-            fcn = self.modular_add(fcn, a_hash, modulus=2**32, bits=32)
-            fcn = self.modular_add(fcn, self.K_SINES[i], modulus=2**32, bits=32)
-            fcn = self.modular_add(fcn, m_32bit_words[g], modulus=2 ** 32, bits=32)
-            fcn = self.circular_leftrotate(fcn, shifts[i % 4])  # mod four to repeat shift pattern
+                # Note: modular addition is used in md5 alg
+                fcn = self.modular_add(fcn, a_hash, modulus=2**32, bits=32)
+                fcn = self.modular_add(fcn, self.K_SINES[i], modulus=2**32, bits=32)
+                fcn = self.modular_add(fcn, m_32bit_words[g], modulus=2 ** 32, bits=32)
+                fcn = self.circular_leftrotate(fcn, shifts[i % 4])  # mod four to repeat shift pattern
 
-            # "Jumble" the 32-bit words of the hash "A, B, C, D"
-            a_hash = d_hash
-            d_hash = c_hash
-            c_hash = b_hash
-            b_hash = self.modular_add(b_hash, fcn)
+                # "Jumble" the 32-bit words of the hash "A, B, C, D"
+                a_hash = d_hash
+                d_hash = c_hash
+                c_hash = b_hash
+                b_hash = self.modular_add(b_hash, fcn)
 
             # end i in range(0, 64):
 
             # Add this chunk's hash to result so far:
-            self.a0 = a_hash
-            self.b0 = b_hash
-            self.c0 = c_hash
-            self.d0 = d_hash
+            self.a0 = self.modular_add(self.a0, a_hash, 2**32, 32)
+            self.b0 = self.modular_add(self.b0, b_hash, 2**32, 32)
+            self.c0 = self.modular_add(self.c0, c_hash, 2**32, 32)
+            self.d0 = self.modular_add(self.d0, d_hash, 2**32, 32)
 
         # end for blk_offset in range(...)
 
         digest = self.a0 + self.b0 + self.c0 + self.d0
-        print(self.bin_to_hex(digest))  # confirmed hex convert working correctly
+        return self.bin_to_hex(digest)  # confirmed hex convert working correctly
 
     @staticmethod
     def load_message (input):
@@ -259,7 +259,7 @@ def handle_arguments ():
 
 def main ():
     md5 = Md5(handle_arguments())
-    md5.digest()
+    print(md5.digest())
 
 # =====================
 # ENTRY POINT
