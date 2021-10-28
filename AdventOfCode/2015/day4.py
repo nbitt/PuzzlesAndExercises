@@ -6,6 +6,11 @@ To do this, he needs to find MD5 hashes which, in hexadecimal, start with at lea
 five zeroes. The input to the MD5 hash is some secret key (your puzzle input, given
 below) followed by a number in decimal. To mine AdventCoins, you must find Santa the
 lowest positive number (no leading zeroes: 1, 2, 3, ...) that produces such a hash.
+
+TODO: MD5 has been "cracked" -- this means that we can intentionally generate
+digest collisions (same value for different input). It would be worth exploring
+if this is a quicker way to "crack" this problem.
+
 """
 
 import argparse
