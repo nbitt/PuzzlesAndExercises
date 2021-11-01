@@ -128,6 +128,7 @@ if __name__ == '__main__':
             strings = f.readlines()
         for i, string in enumerate(strings):
             strings[i] = string.strip('\n')  # strip newlines
+        f.close()
         main(strings)
     elif TEST1:
         test_dict = {
