@@ -1,3 +1,6 @@
+# NOTE:
+NOT CURRENTLY WORKING - ISSUE WITH HASH MATH
+
 # OVERVIEW
 An obvious re-invention of a very "invented" wheel. This is a python implementation of the md5
 hashing algorithm, created as exercise to better understand hashing (& algorithms that underlie
